@@ -27,6 +27,10 @@
       const MAIN_COIN = "<%-MAIN_COIN%>";
       const DEFAULT_PAIR = "<%-DEFAULT_PAIR%>";
       const PORT_SSL = <%-portSSL%>;
+      const SHARE = JSON.parse('<%-JSON.stringify(share)%>');
+      
+      var grecaptcha;
+      if (!SHARE.recaptchaEnabled) grecaptcha = null;
     </script>
     <script src='/js/utils.js'></script>
 

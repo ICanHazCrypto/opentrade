@@ -7,8 +7,6 @@ exports.TRADE_MAIN_COIN_TICKER = "MC";
 exports.TRADE_DEFAULT_PAIR = "Litecoin";
 exports.TRADE_COMISSION = 0.001;
 
-exports.recaptcha_pub_key = "6LeX5SQUAAAAAKTieM68Sz4MECO6kJXsSR7_sGP1";
-
 exports.NOREPLY_EMAIL = 'no-reply@multicoins.org';
 exports.SUPPORT_EMAIL = 'ivanivanovkzv@gmail.com';
 exports.my_portSSL = 40443;
@@ -18,6 +16,15 @@ exports.my_port = process.env.PORT || 40080;
 exports.SESSION_TIME = 3600*1000; //one hour
 
 exports.dbName = './database/sqlite.db';
+
+exports.share = {
+   tradeEnabled: false,
+   recaptchaEnabled: false
+};
+exports.tradeEnabled = false;
+exports.recaptchaEnabled = false;
+
+exports.recaptcha_pub_key = "6LeX5SQUAAAAAKTieM68Sz4MECO6kJXsSR7_sGP1";
 
 exports.dbTables = [
    {
@@ -110,7 +117,8 @@ exports.dbTables = [
           ['price', 'TEXT'],
           ['price_pair', 'TEXT'],
           ['time', 'TEXT'],
-          ['info', 'TEXT']
+          ['info', 'TEXT'],
+          ['uuid', 'TEXT UNIQUE PRIMARY KEY']
         ],
         'commands' : 'FOREIGN KEY(coin) REFERENCES coins(name)'
    },
@@ -166,6 +174,8 @@ exports.dbIndexes = [
 exports.DEBUG_MODE = process.env.PORT ? true : false;
 exports.WEB_SOCKETS = null;
 exports.ExchangeBalanceAccountID = 0;
+
+exports.Roles = ['Administrator', 'Support', 'User'];
 
 ////////////////////////////////////////////////////////////////////////////////////
 // Private constants

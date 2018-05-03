@@ -7,10 +7,8 @@ const url = require('url');
 exports.send = function(coin, command, params, callback)
 {
     if (command == 'dumpprivkey' || command == 'dumpwallet' || command == 'backupwallet')
-    {
-        callback({result: false, message: 'Forbidden command'});
-        return;
-    }
+        return callback({result: false, message: 'Forbidden command'});
+
     const p = 'string' != (typeof params) ? JSON.stringify(params) : params;//JSON.stringify(params).substr(1, JSON.stringify(params).length-2);
     const strJSON = '{"jsonrpc": "1.0", "id":"curltest", "method": "'+command+'", "params": '+p+' }';
     
@@ -55,44 +53,47 @@ exports.send = function(coin, command, params, callback)
                     {result: result.success, message: result.message || "", data: result.message || ""};
         
         console.log('rpcPostJSON: result:' + ret.result + " (message: " + (result.message || "")+" )");
-        setTimeout(callback, 1, ret); //callback(ret);
+        return setTimeout(callback, 1, ret);
     });
 }
 
 exports.send2 = function(coin, command, params, callback)
 {
-    g_constants.dbTables['coins'].selectAll('*', 'name="'+coin+'"', '', (err, rows) => {
+    g_constants.dbTables['coins'].selectAll('ROWID AS id', 'name="'+coin+'"', '', (err, rows) => {
         if (err || !rows || !rows.length)
-        {
-            callback({result: false, message: 'Coin not found'});
-            return;
-        }
-        exports.send(rows[0], command, params, callback);
+            return callback({result: false, message: 'Coin not found'});
+
+        exports.send3(rows[0].id, command, params, callback);
     });
 }
 
 let bWaitCoin = {};
-exports.send3 = function(coinID, command, params, callback)
+exports.send3 = function(coinID, command, params, callback, counter)
 {
     if (command == 'move' && params[2]*1 <= 0)
+        return callback({result: false, message: 'Invalid move amount'});
+    
+    const count = counter || 0;
+    
+    if (count > 10)
     {
-        callback({result: false, message: 'Invalid move amount'});
-        return;
+        console.log('Coin '+coinID+' not responce. (counter > 10 sec) command='+command);
+        return setTimeout(callback, 1, {result: false, message: 'Coin RPC is not responded after 10 sec. Try later. '});
     }
+    
     if (bWaitCoin[coinID] && bWaitCoin[coinID].status && bWaitCoin[coinID].status == true)
     {
-        if (bWaitCoin[coinID].time > Date.now() - 6000)
+        if (bWaitCoin[coinID].time > Date.now() + 5000)
         {
-            console.log('Coin '+coinID+' not responce');
-            setTimeout(callback, 100, {result: false, message: 'Coin RPC is not responded. Try later.'});
-            return;
+            console.log('Coin '+coinID+' not responce. delta='+(bWaitCoin[coinID].time - (Date.now()+5000))/1000 +' last_command='+bWaitCoin[coinID].last_command);
+            return setTimeout(callback, 1, {result: false, message: 'Coin RPC is not responded. Try later.'+ ' '+ 'Coin '+coinID+' not responce. delta='+(bWaitCoin[coinID].time - (Date.now()+5000))/1000+' last_command='+bWaitCoin[coinID].last_command});
         }
-        console.log('Wait coin '+coinID+' RPC queue. ')
-        setTimeout(exports.send3, 1000, coinID, command, params, callback);
-        return;
+        if (count == 0) console.log('Wait coin '+coinID+' RPC queue. command='+command)
+        
+        return setTimeout(exports.send3, 1000, coinID, command, params, callback, count+1);
     }
-    console.log('Coin '+coinID+' started RPC ')
-    bWaitCoin[coinID] = {status: true, time: Date.now()};
+    console.log('Coin '+coinID+' started RPC command='+command)
+    bWaitCoin[coinID] = {status: true, time: Date.now(), last_command: command};
     
     try
     {
@@ -100,18 +101,17 @@ exports.send3 = function(coinID, command, params, callback)
             if (err || !rows || !rows.length)
             {
                 bWaitCoin[coinID] = {status: false, time: Date.now()};
-                callback({result: false, message: 'Coin not found'});
-                return;
+                return callback({result: false, message: 'Coin not found'});
             }
             exports.send(rows[0], command, params, ret => {
                 bWaitCoin[coinID] = {status: false, time: Date.now()};
-                setTimeout(callback, 100, ret);
+                return setTimeout(callback, 100, ret);
             });
         });
     }
     catch(e)
     {
         bWaitCoin[coinID] = {status: false, time: Date.now()};
-        callback({result: false, message: 'Unexpected RPC error'});
+        return callback({result: false, message: 'Unexpected RPC error'});
     }
 }
